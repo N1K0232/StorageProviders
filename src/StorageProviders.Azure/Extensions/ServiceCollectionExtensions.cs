@@ -1,8 +1,8 @@
 ﻿using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using StorageProviders.Abstractions.Extensions;
+using StorageProviders.Azure;
+using StorageProviders.Extensions;
 
-namespace StorageProviders.Azure.Extensions;
+namespace Microsoft.Extensions.DependencyInjection;
 
 public static class ServiceCollectionExtensions
 {

@@ -1,4 +1,4 @@
-﻿namespace StorageProviders.Abstractions;
+﻿namespace StorageProviders;
 
 public interface IStorageCache
 {
