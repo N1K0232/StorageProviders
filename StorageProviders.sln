@@ -1,0 +1,44 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{11824DFD-6009-4B4E-9690-E68936D5EDE7}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{B3AC2115-386D-49B5-A07C-B6C5AC5B01C3}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{B1BACF9E-15B0-4B5A-A5FF-8A16308CCEF9}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StorageProviders.Abstractions", "src\StorageProviders.Abstractions\StorageProviders.Abstractions.csproj", "{F2BA180B-2453-4B8B-806D-CC7B7084D4B2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StorageProviders.Azure", "src\StorageProviders.Azure\StorageProviders.Azure.csproj", "{A42B0F4C-7226-4C73-97C3-BB60AA623271}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F2BA180B-2453-4B8B-806D-CC7B7084D4B2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F2BA180B-2453-4B8B-806D-CC7B7084D4B2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F2BA180B-2453-4B8B-806D-CC7B7084D4B2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F2BA180B-2453-4B8B-806D-CC7B7084D4B2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A42B0F4C-7226-4C73-97C3-BB60AA623271}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A42B0F4C-7226-4C73-97C3-BB60AA623271}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A42B0F4C-7226-4C73-97C3-BB60AA623271}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A42B0F4C-7226-4C73-97C3-BB60AA623271}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{F2BA180B-2453-4B8B-806D-CC7B7084D4B2} = {11824DFD-6009-4B4E-9690-E68936D5EDE7}
+		{A42B0F4C-7226-4C73-97C3-BB60AA623271} = {11824DFD-6009-4B4E-9690-E68936D5EDE7}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {94DB3808-DC5C-4EF0-961B-44B6FE9BBA7E}
+	EndGlobalSection
+EndGlobal
