@@ -34,6 +34,22 @@ internal class AzureStorageProvider : IStorageProvider
         return await blobClient.ExistsAsync().ConfigureAwait(false);
     }
 
+    public async Task<StorageFileInfo> GetPropertiesAsync(string path)
+    {
+        var blobClient = await GetBlobClientAsync(path).ConfigureAwait(false);
+        var properties = await blobClient.GetPropertiesAsync().ConfigureAwait(false);
+
+        var fileInfo = new StorageFileInfo(string.IsNullOrWhiteSpace(settings.ContainerName) ? $"{blobClient.BlobContainerName}/{blobClient.Name}" : blobClient.Name)
+        {
+            Length = properties.Value.ContentLength,
+            CreationDate = properties.Value.CreatedOn,
+            LastModifiedDate = properties.Value.LastModified,
+            Metadata = properties.Value.Metadata
+        };
+
+        return fileInfo;
+    }
+
     public async Task<Stream?> ReadAsync(string path)
     {
         var stream = await cache.GetAsync(path).ConfigureAwait(false);
