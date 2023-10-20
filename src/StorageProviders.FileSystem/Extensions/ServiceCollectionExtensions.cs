@@ -29,8 +29,8 @@ public static class ServiceCollectionExtensions
             throw new ArgumentNullException(nameof(sectionName), "the section is required");
         }
 
-        var section = configuration.GetSection(sectionName);
-        var fileSystemStorageSettings = section.Get<FileSystemStorageSettings>();
+        IConfigurationSection section = configuration.GetSection(sectionName);
+        FileSystemStorageSettings? fileSystemStorageSettings = section.Get<FileSystemStorageSettings>();
 
         services.AddSingleton(fileSystemStorageSettings ?? throw new InvalidOperationException("settings are required"));
         services.AddStorageProvider<FileSystemStorageProvider>();

@@ -4,7 +4,7 @@ public static class StorageProviderExtensions
 {
     public static async Task<string?> ReadAsStringAsync(this IStorageProvider storageProvider, string path)
     {
-        using var stream = await storageProvider.ReadAsync(path).ConfigureAwait(false);
+        using Stream? stream = await storageProvider.ReadAsync(path).ConfigureAwait(false);
         if (stream is null)
         {
             return null;
@@ -13,13 +13,15 @@ public static class StorageProviderExtensions
         stream.Position = 0;
         using var reader = new StreamReader(stream);
 
-        var content = await reader.ReadToEndAsync().ConfigureAwait(false);
+        string content = await reader.ReadToEndAsync().ConfigureAwait(false);
+        stream.Close();
+
         return content;
     }
 
     public static async Task<byte[]?> ReadAsByteArrayAsync(this IStorageProvider storageProvider, string path)
     {
-        using var stream = await storageProvider.ReadAsync(path).ConfigureAwait(false);
+        using Stream? stream = await storageProvider.ReadAsync(path).ConfigureAwait(false);
         if (stream is null)
         {
             return null;
@@ -31,8 +33,7 @@ public static class StorageProviderExtensions
         await stream.CopyToAsync(memoryStream).ConfigureAwait(false);
         stream.Close();
 
-        var content = memoryStream.ToArray();
-        return content;
+        return memoryStream.ToArray();
     }
 
     public static async Task UploadAsync(this IStorageProvider storageProvider, string path, byte[] content, bool overwrite = false)

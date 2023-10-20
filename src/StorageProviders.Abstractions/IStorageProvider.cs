@@ -8,7 +8,7 @@ public interface IStorageProvider
 
     Task<bool> ExistsAsync(string path);
 
-    Task<StorageFileInfo> GetPropertiesAsync(string path);
+    Task<StorageFileInfo?> GetPropertiesAsync(string path);
 
     Task<Stream?> ReadAsync(string path);
 

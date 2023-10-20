@@ -1,4 +1,5 @@
-﻿using Azure.Storage.Blobs;
+﻿using Azure;
+using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using MimeMapping;
 using StorageProviders.Abstractions;
@@ -7,39 +8,43 @@ namespace StorageProviders.Azure;
 
 internal class AzureStorageProvider : IStorageProvider
 {
-    private readonly AzureStorageSettings settings;
+    private readonly AzureStorageSettings azureStorageSettings;
     private readonly BlobServiceClient blobServiceClient;
     private readonly IStorageCache cache;
 
-    public AzureStorageProvider(AzureStorageSettings settings, IStorageCache cache)
+    public AzureStorageProvider(AzureStorageSettings azureStorageSettings, IStorageCache cache)
     {
-        blobServiceClient = new BlobServiceClient(settings.ConnectionString);
+        blobServiceClient = new BlobServiceClient(azureStorageSettings.ConnectionString);
 
-        this.settings = settings;
+        this.azureStorageSettings = azureStorageSettings;
         this.cache = cache;
     }
 
     public async Task DeleteAsync(string path)
     {
-        var (containerName, blobName) = ExtractContainerBlobName(path);
-        var blobContainerClient = blobServiceClient.GetBlobContainerClient(containerName);
+        string[] parts = ExtractContainerBlobName(path);
+        BlobContainerClient blobContainerClient = blobServiceClient.GetBlobContainerClient(parts[0]);
 
-        await blobContainerClient.DeleteBlobIfExistsAsync(blobName).ConfigureAwait(false);
+        await blobContainerClient.DeleteBlobIfExistsAsync(parts[1]).ConfigureAwait(false);
         await cache.DeleteAsync(path).ConfigureAwait(false);
     }
 
     public async Task<bool> ExistsAsync(string path)
     {
-        var blobClient = await GetBlobClientAsync(path).ConfigureAwait(false);
+        BlobClient blobClient = await GetBlobClientAsync(path).ConfigureAwait(false);
         return await blobClient.ExistsAsync().ConfigureAwait(false);
     }
 
-    public async Task<StorageFileInfo> GetPropertiesAsync(string path)
+    public async Task<StorageFileInfo?> GetPropertiesAsync(string path)
     {
-        var blobClient = await GetBlobClientAsync(path).ConfigureAwait(false);
-        var properties = await blobClient.GetPropertiesAsync().ConfigureAwait(false);
+        BlobClient blobClient = await GetBlobClientAsync(path).ConfigureAwait(false);
+        Response<BlobProperties> properties = await blobClient.GetPropertiesAsync().ConfigureAwait(false);
 
-        var fileInfo = new StorageFileInfo(string.IsNullOrWhiteSpace(settings.ContainerName) ? $"{blobClient.BlobContainerName}/{blobClient.Name}" : blobClient.Name)
+        string? containerName = azureStorageSettings.ContainerName;
+        string blobName = blobClient.Name;
+
+        string name = !string.IsNullOrWhiteSpace(containerName) ? $"{blobClient.BlobContainerName}/{blobName}" : blobName;
+        var storageFileInfo = new StorageFileInfo(name)
         {
             Length = properties.Value.ContentLength,
             CreationDate = properties.Value.CreatedOn,
@@ -47,16 +52,16 @@ internal class AzureStorageProvider : IStorageProvider
             Metadata = properties.Value.Metadata
         };
 
-        return fileInfo;
+        return storageFileInfo;
     }
 
     public async Task<Stream?> ReadAsync(string path)
     {
-        var stream = await cache.GetAsync(path).ConfigureAwait(false);
+        Stream? stream = await cache.GetAsync(path).ConfigureAwait(false);
         if (stream is null)
         {
-            var blobClient = await GetBlobClientAsync(path).ConfigureAwait(false);
-            var blobExists = await blobClient.ExistsAsync().ConfigureAwait(false);
+            BlobClient blobClient = await GetBlobClientAsync(path).ConfigureAwait(false);
+            bool blobExists = await blobClient.ExistsAsync().ConfigureAwait(false);
 
             if (!blobExists)
             {
@@ -75,10 +80,10 @@ internal class AzureStorageProvider : IStorageProvider
         ArgumentNullException.ThrowIfNull(path, nameof(path));
         ArgumentNullException.ThrowIfNull(stream, nameof(stream));
 
-        var blobClient = await GetBlobClientAsync(path, true).ConfigureAwait(false);
+        BlobClient blobClient = await GetBlobClientAsync(path, true).ConfigureAwait(false);
         if (!overwrite)
         {
-            var blobExists = await blobClient.ExistsAsync().ConfigureAwait(false);
+            bool blobExists = await blobClient.ExistsAsync().ConfigureAwait(false);
             if (blobExists)
             {
                 throw new IOException($"The file {path} already exists");
@@ -101,33 +106,37 @@ internal class AzureStorageProvider : IStorageProvider
 
     private async Task<BlobClient> GetBlobClientAsync(string path, bool createIfNotExists = false)
     {
-        var (containerName, blobName) = ExtractContainerBlobName(path);
-        var blobContainerClient = blobServiceClient.GetBlobContainerClient(containerName);
+        string[] parts = ExtractContainerBlobName(path);
+        BlobContainerClient blobContainerClient = blobServiceClient.GetBlobContainerClient(parts[0]);
 
         if (createIfNotExists)
         {
             await blobContainerClient.CreateIfNotExistsAsync(PublicAccessType.None).ConfigureAwait(false);
         }
 
-        var blobClient = blobContainerClient.GetBlobClient(blobName);
+        BlobClient blobClient = blobContainerClient.GetBlobClient(parts[1]);
         return blobClient;
     }
 
-    private (string ContainerName, string BlobName) ExtractContainerBlobName(string? path)
+    private string[] ExtractContainerBlobName(string? path)
     {
-        var normalizedPath = path?.Replace(@"\", "/") ?? string.Empty;
-        if (!string.IsNullOrWhiteSpace(settings.ContainerName))
+        string normalizedPath = path?.Replace(@"\", "/") ?? string.Empty;
+        string? containerName = azureStorageSettings.ContainerName;
+
+        if (!string.IsNullOrWhiteSpace(containerName))
         {
-            return (settings.ContainerName, normalizedPath);
+            return new string[2] { containerName, normalizedPath };
         }
+        else
+        {
+            string? root = Path.GetPathRoot(normalizedPath) ?? string.Empty;
+            string fileName = normalizedPath[root.Length..];
 
-        var root = Path.GetPathRoot(normalizedPath);
-        var fileName = normalizedPath[(root ?? string.Empty).Length..];
+            string[] parts = fileName.Split('/');
+            containerName = parts.First().ToLowerInvariant();
 
-        var parts = fileName.Split('/');
-        var containerName = parts.First().ToLowerInvariant();
-
-        var blobName = string.Join('/', parts.Skip(1));
-        return (containerName, blobName);
+            string blobName = string.Join('/', parts.Skip(1));
+            return new string[2] { containerName, blobName };
+        }
     }
 }

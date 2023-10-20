@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
 using StorageProviders.Azure;
-using StorageProviders.Extensions;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -44,11 +43,11 @@ public static class ServiceCollectionExtensions
 
         if (string.IsNullOrWhiteSpace(sectionName))
         {
-            throw new ArgumentNullException(nameof(sectionName), "the section can't be null");
+            throw new ArgumentNullException(nameof(sectionName), "the section is required");
         }
 
-        var azureStorageSection = configuration.GetSection(sectionName);
-        var azureStorageSettings = azureStorageSection.Get<AzureStorageSettings>();
+        IConfigurationSection section = configuration.GetSection(sectionName);
+        AzureStorageSettings? azureStorageSettings = section.Get<AzureStorageSettings>();
 
         services.AddSingleton(azureStorageSettings ?? throw new InvalidOperationException("settings are required"));
         services.AddStorageProvider<AzureStorageProvider>();

@@ -15,8 +15,10 @@ internal class FileSystemStorageProvider : IStorageProvider
 
     public async Task DeleteAsync(string path)
     {
-        var fullPath = CreatePath(path);
-        if (File.Exists(fullPath))
+        string fullPath = CreatePath(path);
+        bool exists = File.Exists(fullPath);
+
+        if (exists)
         {
             File.Delete(fullPath);
             await cache.DeleteAsync(path).ConfigureAwait(false);
@@ -25,21 +27,21 @@ internal class FileSystemStorageProvider : IStorageProvider
 
     public Task<bool> ExistsAsync(string path)
     {
-        var fullPath = CreatePath(path);
-        var exists = File.Exists(fullPath);
+        string fullPath = CreatePath(path);
+        bool exists = File.Exists(fullPath);
 
         return Task.FromResult(exists);
     }
 
     public async Task<StorageFileInfo?> GetPropertiesAsync(string path)
     {
-        var stream = await ReadCoreAsync(path).ConfigureAwait(false);
+        Stream? stream = await ReadCoreAsync(path).ConfigureAwait(false);
         if (stream is null)
         {
             return null;
         }
 
-        var fileName = Path.GetFileName(path);
+        string? fileName = Path.GetFileName(path) ?? string.Empty;
         var fileInfo = new FileInfo(fileName);
 
         var storageFileInfo = new StorageFileInfo(path)
@@ -54,8 +56,8 @@ internal class FileSystemStorageProvider : IStorageProvider
 
     public async Task<Stream?> ReadAsync(string path)
     {
-        var fullPath = CreatePath(path);
-        var stream = await cache.GetAsync(fullPath).ConfigureAwait(false);
+        string fullPath = CreatePath(path);
+        Stream? stream = await cache.GetAsync(fullPath).ConfigureAwait(false);
 
         if (stream is null)
         {
@@ -67,22 +69,22 @@ internal class FileSystemStorageProvider : IStorageProvider
 
     public async Task UploadAsync(string path, Stream stream, bool overwrite = false)
     {
-        var fullPath = CreatePath(path);
+        string fullPath = CreatePath(path);
         await CreateDirectoryAsync(path).ConfigureAwait(false);
 
         using var outputStream = new FileStream(fullPath, FileMode.Create, FileAccess.Write);
         stream.Position = 0;
 
         await stream.CopyToAsync(outputStream).ConfigureAwait(false);
-        await cache.SetAsync(path, outputStream, TimeSpan.FromHours(1)).ConfigureAwait(false);
+        await cache.SetAsync(fullPath, outputStream, TimeSpan.FromHours(1)).ConfigureAwait(false);
     }
 
     private Task CreateDirectoryAsync(string path)
     {
-        var fullPath = CreatePath(path);
-        var directoryName = Path.GetDirectoryName(fullPath) ?? string.Empty;
+        string fullPath = CreatePath(path);
+        string directoryName = Path.GetDirectoryName(fullPath) ?? string.Empty;
 
-        if (string.IsNullOrWhiteSpace(directoryName) || !Directory.Exists(directoryName))
+        if (!string.IsNullOrWhiteSpace(directoryName) || !Directory.Exists(directoryName))
         {
             Directory.CreateDirectory(directoryName);
         }
@@ -92,7 +94,7 @@ internal class FileSystemStorageProvider : IStorageProvider
 
     private string CreatePath(string path)
     {
-        var fullPath = Path.Combine(fileSystemStorageSettings.StorageFolder, path);
+        string fullPath = Path.Combine(fileSystemStorageSettings.StorageFolder, path);
         if (!Path.IsPathRooted(fullPath))
         {
             fullPath = Path.Combine(fileSystemStorageSettings.SiteRootFolder, fullPath);
@@ -103,8 +105,8 @@ internal class FileSystemStorageProvider : IStorageProvider
 
     private Task<Stream?> ReadCoreAsync(string path)
     {
-        var fullPath = CreatePath(path);
-        var exists = File.Exists(fullPath);
+        string fullPath = CreatePath(path);
+        bool exists = File.Exists(fullPath);
 
         Stream? stream = exists ? File.OpenRead(fullPath) : null;
         return Task.FromResult(stream);

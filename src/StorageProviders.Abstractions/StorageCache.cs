@@ -19,8 +19,12 @@ internal class StorageCache : IStorageCache
 
     public Task<Stream?> GetAsync(string path)
     {
-        var stream = cache.Get<Stream>(path);
-        return Task.FromResult(stream);
+        if (cache.TryGetValue(path, out Stream? stream))
+        {
+            return Task.FromResult(stream);
+        }
+
+        return Task.FromResult<Stream?>(null);
     }
 
     public Task SetAsync(string path, Stream stream, TimeSpan expiration)
