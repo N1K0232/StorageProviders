@@ -22,10 +22,10 @@ internal class AzureStorageProvider : IStorageProvider
 
     public async Task DeleteAsync(string path)
     {
-        string[] parts = ExtractContainerBlobName(path);
-        BlobContainerClient blobContainerClient = blobServiceClient.GetBlobContainerClient(parts[0]);
+        (string containerName, string blobName) = ExtractContainerBlobName(path);
+        BlobContainerClient blobContainerClient = blobServiceClient.GetBlobContainerClient(containerName);
 
-        await blobContainerClient.DeleteBlobIfExistsAsync(parts[1]).ConfigureAwait(false);
+        await blobContainerClient.DeleteBlobIfExistsAsync(blobName).ConfigureAwait(false);
         await cache.DeleteAsync(path).ConfigureAwait(false);
     }
 
@@ -41,9 +41,11 @@ internal class AzureStorageProvider : IStorageProvider
         Response<BlobProperties> properties = await blobClient.GetPropertiesAsync().ConfigureAwait(false);
 
         string? containerName = azureStorageSettings.ContainerName;
-        string blobName = blobClient.Name;
+        string blobContainerName = blobClient.BlobContainerName;
 
-        string name = !string.IsNullOrWhiteSpace(containerName) ? $"{blobClient.BlobContainerName}/{blobName}" : blobName;
+        string blobName = blobClient.Name;
+        string name = !string.IsNullOrWhiteSpace(containerName) ? $"{blobContainerName}/{blobName}" : blobName;
+
         var storageFileInfo = new StorageFileInfo(name)
         {
             Length = properties.Value.ContentLength,
@@ -106,37 +108,36 @@ internal class AzureStorageProvider : IStorageProvider
 
     private async Task<BlobClient> GetBlobClientAsync(string path, bool createIfNotExists = false)
     {
-        string[] parts = ExtractContainerBlobName(path);
-        BlobContainerClient blobContainerClient = blobServiceClient.GetBlobContainerClient(parts[0]);
+        (string containerName, string blobName) = ExtractContainerBlobName(path);
+        BlobContainerClient blobContainerClient = blobServiceClient.GetBlobContainerClient(containerName);
 
         if (createIfNotExists)
         {
             await blobContainerClient.CreateIfNotExistsAsync(PublicAccessType.None).ConfigureAwait(false);
         }
 
-        BlobClient blobClient = blobContainerClient.GetBlobClient(parts[1]);
-        return blobClient;
+        return blobContainerClient.GetBlobClient(blobName);
     }
 
-    private string[] ExtractContainerBlobName(string? path)
+    private (string ContainerName, string BlobName) ExtractContainerBlobName(string? path)
     {
         string normalizedPath = path?.Replace(@"\", "/") ?? string.Empty;
         string? containerName = azureStorageSettings.ContainerName;
 
         if (!string.IsNullOrWhiteSpace(containerName))
         {
-            return new string[2] { containerName, normalizedPath };
+            return (containerName, normalizedPath);
         }
         else
         {
-            string? root = Path.GetPathRoot(normalizedPath) ?? string.Empty;
+            string root = Path.GetPathRoot(normalizedPath) ?? string.Empty;
             string fileName = normalizedPath[root.Length..];
 
             string[] parts = fileName.Split('/');
             containerName = parts.First().ToLowerInvariant();
 
             string blobName = string.Join('/', parts.Skip(1));
-            return new string[2] { containerName, blobName };
+            return (containerName, blobName);
         }
     }
 }
