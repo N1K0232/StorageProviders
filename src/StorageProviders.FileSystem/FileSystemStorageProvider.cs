@@ -13,29 +13,38 @@ internal class FileSystemStorageProvider : IStorageProvider
         this.storageCache = storageCache;
     }
 
-    public async Task DeleteAsync(string path)
+    public async Task DeleteAsync(string path, CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrEmpty(path, nameof(path));
+        cancellationToken.ThrowIfCancellationRequested();
+
         string fullPath = CreatePath(path);
         bool exists = File.Exists(fullPath);
 
         if (exists)
         {
             File.Delete(fullPath);
-            await storageCache.DeleteAsync(path).ConfigureAwait(false);
+            await storageCache.DeleteAsync(path, cancellationToken).ConfigureAwait(false);
         }
     }
 
-    public Task<bool> ExistsAsync(string path)
+    public Task<bool> ExistsAsync(string path, CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrEmpty(path, nameof(path));
+        cancellationToken.ThrowIfCancellationRequested();
+
         string fullPath = CreatePath(path);
         bool exists = File.Exists(fullPath);
 
         return Task.FromResult(exists);
     }
 
-    public async Task<StorageFileInfo?> GetPropertiesAsync(string path)
+    public async Task<StorageFileInfo?> GetPropertiesAsync(string path, CancellationToken cancellationToken = default)
     {
-        Stream? stream = await ReadCoreAsync(path).ConfigureAwait(false);
+        ArgumentException.ThrowIfNullOrEmpty(path, nameof(path));
+        cancellationToken.ThrowIfCancellationRequested();
+
+        Stream? stream = await ReadCoreAsync(path, cancellationToken).ConfigureAwait(false);
         if (stream is null)
         {
             return null;
@@ -54,33 +63,42 @@ internal class FileSystemStorageProvider : IStorageProvider
         return storageFileInfo;
     }
 
-    public async Task<Stream?> ReadAsync(string path)
+    public async Task<Stream?> ReadAsync(string path, CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrEmpty(path, nameof(path));
+        cancellationToken.ThrowIfCancellationRequested();
+
         string fullPath = CreatePath(path);
-        Stream? stream = await storageCache.ReadAsync(fullPath).ConfigureAwait(false);
+        Stream? stream = await storageCache.ReadAsync(fullPath, cancellationToken).ConfigureAwait(false);
 
         if (stream is null)
         {
-            return await ReadCoreAsync(path).ConfigureAwait(false);
+            return await ReadCoreAsync(path, cancellationToken).ConfigureAwait(false);
         }
 
         return stream;
     }
 
-    public async Task UploadAsync(string path, Stream stream, bool overwrite = false)
+    public async Task UploadAsync(string path, Stream stream, bool overwrite = false, CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrEmpty(path, nameof(path));
+        ArgumentNullException.ThrowIfNull(stream, nameof(stream));
+        cancellationToken.ThrowIfCancellationRequested();
+
         string fullPath = CreatePath(path);
-        await CreateDirectoryAsync(path).ConfigureAwait(false);
+        await CreateDirectoryAsync(path, cancellationToken).ConfigureAwait(false);
 
         using var outputStream = new FileStream(fullPath, FileMode.Create, FileAccess.Write);
         stream.Position = 0;
 
-        await stream.CopyToAsync(outputStream).ConfigureAwait(false);
-        await storageCache.SetAsync(fullPath, outputStream, TimeSpan.FromHours(1)).ConfigureAwait(false);
+        await stream.CopyToAsync(outputStream, cancellationToken).ConfigureAwait(false);
+        await storageCache.SetAsync(fullPath, outputStream, TimeSpan.FromHours(1), cancellationToken).ConfigureAwait(false);
     }
 
-    private Task CreateDirectoryAsync(string path)
+    private Task CreateDirectoryAsync(string path, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         string fullPath = CreatePath(path);
         string directoryName = Path.GetDirectoryName(fullPath) ?? string.Empty;
 
@@ -103,8 +121,10 @@ internal class FileSystemStorageProvider : IStorageProvider
         return fullPath;
     }
 
-    private Task<Stream?> ReadCoreAsync(string path)
+    private Task<Stream?> ReadCoreAsync(string path, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         string fullPath = CreatePath(path);
         bool exists = File.Exists(fullPath);
 

@@ -4,13 +4,13 @@ namespace StorageProviders;
 
 public interface IStorageProvider
 {
-    Task DeleteAsync(string path);
+    Task DeleteAsync(string path, CancellationToken cancellationToken = default);
 
-    Task<bool> ExistsAsync(string path);
+    Task<bool> ExistsAsync(string path, CancellationToken cancellationToken = default);
 
-    Task<StorageFileInfo?> GetPropertiesAsync(string path);
+    Task<StorageFileInfo?> GetPropertiesAsync(string path, CancellationToken cancellationToken = default);
 
-    Task<Stream?> ReadAsync(string path);
+    Task<Stream?> ReadAsync(string path, CancellationToken cancellationToken = default);
 
-    Task UploadAsync(string path, Stream stream, bool overwrite = false);
+    Task UploadAsync(string path, Stream stream, bool overwrite = false, CancellationToken cancellationToken = default);
 }

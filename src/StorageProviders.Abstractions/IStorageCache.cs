@@ -2,9 +2,9 @@
 
 public interface IStorageCache
 {
-    Task DeleteAsync(string path);
+    Task DeleteAsync(string path, CancellationToken cancellationToken = default);
 
-    Task<Stream?> ReadAsync(string path);
+    Task<Stream?> ReadAsync(string path, CancellationToken cancellationToken = default);
 
-    Task SetAsync(string path, Stream stream, TimeSpan expiration);
+    Task SetAsync(string path, Stream stream, TimeSpan expiration, CancellationToken cancellationToken = default);
 }

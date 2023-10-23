@@ -11,14 +11,17 @@ internal class StorageCache : IStorageCache
         this.cache = cache;
     }
 
-    public Task DeleteAsync(string path)
+    public Task DeleteAsync(string path, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         cache.Remove(path);
+
         return Task.CompletedTask;
     }
 
-    public Task<Stream?> ReadAsync(string path)
+    public Task<Stream?> ReadAsync(string path, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (cache.TryGetValue(path, out Stream? stream))
         {
             return Task.FromResult(stream);
@@ -27,9 +30,11 @@ internal class StorageCache : IStorageCache
         return Task.FromResult<Stream?>(null);
     }
 
-    public Task SetAsync(string path, Stream stream, TimeSpan expiration)
+    public Task SetAsync(string path, Stream stream, TimeSpan expiration, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         cache.Set(path, stream, expiration);
+
         return Task.CompletedTask;
     }
 }
