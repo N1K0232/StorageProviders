@@ -5,12 +5,12 @@ namespace StorageProviders.FileSystem;
 internal class FileSystemStorageProvider : IStorageProvider
 {
     private readonly FileSystemStorageSettings fileSystemStorageSettings;
-    private readonly IStorageCache cache;
+    private readonly IStorageCache storageCache;
 
-    public FileSystemStorageProvider(FileSystemStorageSettings fileSystemStorageSettings, IStorageCache cache)
+    public FileSystemStorageProvider(FileSystemStorageSettings fileSystemStorageSettings, IStorageCache storageCache)
     {
         this.fileSystemStorageSettings = fileSystemStorageSettings;
-        this.cache = cache;
+        this.storageCache = storageCache;
     }
 
     public async Task DeleteAsync(string path)
@@ -21,7 +21,7 @@ internal class FileSystemStorageProvider : IStorageProvider
         if (exists)
         {
             File.Delete(fullPath);
-            await cache.DeleteAsync(path).ConfigureAwait(false);
+            await storageCache.DeleteAsync(path).ConfigureAwait(false);
         }
     }
 
@@ -57,7 +57,7 @@ internal class FileSystemStorageProvider : IStorageProvider
     public async Task<Stream?> ReadAsync(string path)
     {
         string fullPath = CreatePath(path);
-        Stream? stream = await cache.GetAsync(fullPath).ConfigureAwait(false);
+        Stream? stream = await storageCache.ReadAsync(fullPath).ConfigureAwait(false);
 
         if (stream is null)
         {
@@ -76,7 +76,7 @@ internal class FileSystemStorageProvider : IStorageProvider
         stream.Position = 0;
 
         await stream.CopyToAsync(outputStream).ConfigureAwait(false);
-        await cache.SetAsync(fullPath, outputStream, TimeSpan.FromHours(1)).ConfigureAwait(false);
+        await storageCache.SetAsync(fullPath, outputStream, TimeSpan.FromHours(1)).ConfigureAwait(false);
     }
 
     private Task CreateDirectoryAsync(string path)

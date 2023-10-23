@@ -17,7 +17,7 @@ internal class StorageCache : IStorageCache
         return Task.CompletedTask;
     }
 
-    public Task<Stream?> GetAsync(string path)
+    public Task<Stream?> ReadAsync(string path)
     {
         if (cache.TryGetValue(path, out Stream? stream))
         {

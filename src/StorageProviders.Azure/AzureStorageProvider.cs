@@ -10,14 +10,14 @@ internal class AzureStorageProvider : IStorageProvider
 {
     private readonly AzureStorageSettings azureStorageSettings;
     private readonly BlobServiceClient blobServiceClient;
-    private readonly IStorageCache cache;
+    private readonly IStorageCache storageCache;
 
-    public AzureStorageProvider(AzureStorageSettings azureStorageSettings, IStorageCache cache)
+    public AzureStorageProvider(AzureStorageSettings azureStorageSettings, IStorageCache storageCache)
     {
         blobServiceClient = new BlobServiceClient(azureStorageSettings.ConnectionString);
 
         this.azureStorageSettings = azureStorageSettings;
-        this.cache = cache;
+        this.storageCache = storageCache;
     }
 
     public async Task DeleteAsync(string path)
@@ -26,7 +26,7 @@ internal class AzureStorageProvider : IStorageProvider
         BlobContainerClient blobContainerClient = blobServiceClient.GetBlobContainerClient(containerName);
 
         await blobContainerClient.DeleteBlobIfExistsAsync(blobName).ConfigureAwait(false);
-        await cache.DeleteAsync(path).ConfigureAwait(false);
+        await storageCache.DeleteAsync(path).ConfigureAwait(false);
     }
 
     public async Task<bool> ExistsAsync(string path)
@@ -59,7 +59,7 @@ internal class AzureStorageProvider : IStorageProvider
 
     public async Task<Stream?> ReadAsync(string path)
     {
-        Stream? stream = await cache.GetAsync(path).ConfigureAwait(false);
+        Stream? stream = await storageCache.ReadAsync(path).ConfigureAwait(false);
         if (stream is null)
         {
             BlobClient blobClient = await GetBlobClientAsync(path).ConfigureAwait(false);
@@ -103,7 +103,7 @@ internal class AzureStorageProvider : IStorageProvider
         };
 
         await blobClient.UploadAsync(stream, headers).ConfigureAwait(false);
-        await cache.SetAsync(path, stream, TimeSpan.FromHours(1)).ConfigureAwait(false);
+        await storageCache.SetAsync(path, stream, TimeSpan.FromHours(1)).ConfigureAwait(false);
     }
 
     private async Task<BlobClient> GetBlobClientAsync(string path, bool createIfNotExists = false)
