@@ -1,6 +1,4 @@
-﻿using StorageProviders.Abstractions;
-
-namespace StorageProviders;
+﻿namespace StorageProviders;
 
 public interface IStorageProvider : IDisposable
 {

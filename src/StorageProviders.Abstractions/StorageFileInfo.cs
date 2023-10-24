@@ -1,8 +1,8 @@
 ﻿using MimeMapping;
 
-namespace StorageProviders.Abstractions;
+namespace StorageProviders;
 
-public class StorageFileInfo
+public sealed class StorageFileInfo
 {
     public StorageFileInfo(string name)
     {

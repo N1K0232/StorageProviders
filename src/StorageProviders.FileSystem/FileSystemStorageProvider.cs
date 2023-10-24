@@ -1,20 +1,16 @@
-﻿using StorageProviders.Abstractions;
+﻿namespace StorageProviders.FileSystem;
 
-namespace StorageProviders.FileSystem;
-
-public sealed class FileSystemStorageProvider : IStorageProvider
+public sealed class FileSystemStorageProvider : StorageProvider
 {
     private readonly FileSystemStorageSettings fileSystemStorageSettings;
-
     private Stream? outputStream;
-    private bool disposed = false;
 
     public FileSystemStorageProvider(FileSystemStorageSettings fileSystemStorageSettings)
     {
         this.fileSystemStorageSettings = fileSystemStorageSettings;
     }
 
-    public async Task DeleteAsync(string path, CancellationToken cancellationToken = default)
+    public override async Task DeleteAsync(string path, CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();
         ArgumentException.ThrowIfNullOrEmpty(path, nameof(path));
@@ -29,12 +25,12 @@ public sealed class FileSystemStorageProvider : IStorageProvider
         }
     }
 
-    public IAsyncEnumerable<string> EnumerateAsync(string? prefix, string[] extensions, CancellationToken cancellationToken = default)
+    public override IAsyncEnumerable<string> EnumerateAsync(string? prefix, string[] extensions, CancellationToken cancellationToken = default)
     {
         throw new NotImplementedException();
     }
 
-    public async Task<bool> ExistsAsync(string path, CancellationToken cancellationToken = default)
+    public override async Task<bool> ExistsAsync(string path, CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();
         ArgumentException.ThrowIfNullOrEmpty(path, nameof(path));
@@ -42,12 +38,12 @@ public sealed class FileSystemStorageProvider : IStorageProvider
         return await CheckExistsAsync(path, cancellationToken).ConfigureAwait(false);
     }
 
-    public Task<StorageFileInfo?> GetPropertiesAsync(string path, CancellationToken cancellationToken = default)
+    public override Task<StorageFileInfo?> GetPropertiesAsync(string path, CancellationToken cancellationToken = default)
     {
         throw new NotImplementedException();
     }
 
-    public async Task<Stream?> ReadAsync(string path, CancellationToken cancellationToken = default)
+    public override async Task<Stream?> ReadAsync(string path, CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();
         cancellationToken.ThrowIfCancellationRequested();
@@ -63,7 +59,7 @@ public sealed class FileSystemStorageProvider : IStorageProvider
         return File.OpenRead(fullPath);
     }
 
-    public async Task UploadAsync(string path, Stream stream, bool overwrite = false, CancellationToken cancellationToken = default)
+    public override async Task UploadAsync(string path, Stream stream, bool overwrite = false, CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();
         cancellationToken.ThrowIfCancellationRequested();
@@ -83,32 +79,18 @@ public sealed class FileSystemStorageProvider : IStorageProvider
         await stream.CopyToAsync(outputStream, cancellationToken).ConfigureAwait(false);
     }
 
-    public void Dispose()
+    protected override void Dispose(bool disposing)
     {
-        Dispose(disposing: true);
-        GC.SuppressFinalize(this);
-    }
-
-    private void Dispose(bool disposing)
-    {
-        if (disposing && !disposed)
+        if (disposing)
         {
             if (outputStream != null)
             {
                 outputStream.Dispose();
                 outputStream = null;
             }
-
-            disposed = true;
         }
-    }
 
-    private void ThrowIfDisposed()
-    {
-        if (disposed)
-        {
-            throw new ObjectDisposedException(GetType().FullName);
-        }
+        base.Dispose(disposing);
     }
 
     private Task<bool> CheckExistsAsync(string path, CancellationToken cancellationToken = default)
