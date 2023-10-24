@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
+using StorageProviders;
 using StorageProviders.FileSystem;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -14,7 +15,7 @@ public static class ServiceCollectionExtensions
         configuration.Invoke(fileSystemStorageSettings);
 
         services.AddSingleton(fileSystemStorageSettings);
-        services.AddStorageProvider<FileSystemStorageProvider>();
+        services.AddScoped<IStorageProvider, FileSystemStorageProvider>();
 
         return services;
     }
@@ -33,7 +34,7 @@ public static class ServiceCollectionExtensions
         FileSystemStorageSettings? fileSystemStorageSettings = section.Get<FileSystemStorageSettings>();
 
         services.AddSingleton(fileSystemStorageSettings ?? throw new InvalidOperationException("settings are required"));
-        services.AddStorageProvider<FileSystemStorageProvider>();
+        services.AddScoped<IStorageProvider, FileSystemStorageProvider>();
 
         return services;
     }

@@ -10,17 +10,15 @@ namespace StorageProviders.Azure;
 public sealed class AzureStorageProvider : IStorageProvider
 {
     private readonly AzureStorageSettings azureStorageSettings;
-    private readonly IStorageCache storageCache;
 
     private BlobServiceClient blobServiceClient;
     private bool disposed = false;
 
-    public AzureStorageProvider(AzureStorageSettings azureStorageSettings, IStorageCache storageCache)
+    public AzureStorageProvider(AzureStorageSettings azureStorageSettings)
     {
         blobServiceClient = new BlobServiceClient(azureStorageSettings.ConnectionString);
 
         this.azureStorageSettings = azureStorageSettings;
-        this.storageCache = storageCache;
     }
 
     public async Task DeleteAsync(string path, CancellationToken cancellationToken = default)
@@ -34,9 +32,7 @@ public sealed class AzureStorageProvider : IStorageProvider
         string blobName = properties.ElementAtOrDefault(1) ?? string.Empty;
 
         BlobContainerClient blobContainerClient = await GetBlobContainerClientAsync(containerName, cancellationToken: cancellationToken).ConfigureAwait(false);
-
         await blobContainerClient.DeleteBlobIfExistsAsync(blobName, cancellationToken: cancellationToken).ConfigureAwait(false);
-        await storageCache.DeleteAsync(path, cancellationToken).ConfigureAwait(false);
     }
 
     public async IAsyncEnumerable<string> EnumerateAsync(string? prefix, string[] extensions, [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -104,22 +100,20 @@ public sealed class AzureStorageProvider : IStorageProvider
         cancellationToken.ThrowIfCancellationRequested();
         ArgumentException.ThrowIfNullOrEmpty(path, nameof(path));
 
-        Stream? stream = await storageCache.ReadAsync(path, cancellationToken).ConfigureAwait(false);
+        BlobClient blobClient = await GetBlobClientAsync(path, cancellationToken: cancellationToken).ConfigureAwait(false);
+        bool blobExists = await blobClient.ExistsAsync(cancellationToken).ConfigureAwait(false);
 
-        if (stream is null)
+        if (!blobExists)
         {
-            BlobClient blobClient = await GetBlobClientAsync(path, cancellationToken: cancellationToken).ConfigureAwait(false);
-            bool blobExists = await blobClient.ExistsAsync(cancellationToken).ConfigureAwait(false);
-
-            if (!blobExists)
-            {
-                return null;
-            }
-
-            stream = await blobClient.OpenReadAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+            return null;
         }
 
-        stream.Position = 0;
+        Stream stream = await blobClient.OpenReadAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+        if (stream.Position != 0)
+        {
+            stream.Position = 0L;
+        }
+
         return stream;
     }
 
@@ -153,7 +147,6 @@ public sealed class AzureStorageProvider : IStorageProvider
         };
 
         await blobClient.UploadAsync(stream, headers, cancellationToken: cancellationToken).ConfigureAwait(false);
-        await storageCache.SetAsync(path, stream, TimeSpan.FromHours(1), cancellationToken).ConfigureAwait(false);
     }
 
     public void Dispose()

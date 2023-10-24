@@ -8,6 +8,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\StorageProviders.Abstractions\StorageProviders.Abstractions.csproj" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="7.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="7.0.4" />
   </ItemGroup>
 
 </Project>

@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
+using StorageProviders;
 using StorageProviders.Azure;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -18,7 +19,7 @@ public static class ServiceCollectionExtensions
             return azureStorageSettings;
         });
 
-        services.AddStorageProvider<AzureStorageProvider>();
+        services.AddScoped<IStorageProvider, AzureStorageProvider>();
         return services;
     }
 
@@ -31,7 +32,7 @@ public static class ServiceCollectionExtensions
         configuration.Invoke(azureStorageSettings);
 
         services.AddSingleton(azureStorageSettings);
-        services.AddStorageProvider<AzureStorageProvider>();
+        services.AddScoped<IStorageProvider, AzureStorageProvider>();
 
         return services;
     }
@@ -50,7 +51,7 @@ public static class ServiceCollectionExtensions
         AzureStorageSettings? azureStorageSettings = section.Get<AzureStorageSettings>();
 
         services.AddSingleton(azureStorageSettings ?? throw new InvalidOperationException("settings are required"));
-        services.AddStorageProvider<AzureStorageProvider>();
+        services.AddScoped<IStorageProvider, AzureStorageProvider>();
 
         return services;
     }
