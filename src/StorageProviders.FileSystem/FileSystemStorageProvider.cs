@@ -31,6 +31,11 @@ public sealed class FileSystemStorageProvider : IStorageProvider
         }
     }
 
+    public IAsyncEnumerable<string> EnumerateAsync(string? prefix, string[] extensions, CancellationToken cancellationToken = default)
+    {
+        throw new NotImplementedException();
+    }
+
     public Task<bool> ExistsAsync(string path, CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();

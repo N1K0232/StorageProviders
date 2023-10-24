@@ -8,6 +8,8 @@ public interface IStorageProvider : IDisposable
 
     Task<bool> ExistsAsync(string path, CancellationToken cancellationToken = default);
 
+    IAsyncEnumerable<string> EnumerateAsync(string? prefix, string[] extensions, CancellationToken cancellationToken = default);
+
     Task<StorageFileInfo?> GetPropertiesAsync(string path, CancellationToken cancellationToken = default);
 
     Task<Stream?> ReadAsync(string path, CancellationToken cancellationToken = default);

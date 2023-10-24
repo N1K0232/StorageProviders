@@ -2,6 +2,9 @@
 
 public static class StorageProviderExtensions
 {
+    public static IAsyncEnumerable<string> EnumerateAsync(this IStorageProvider storageProvider, string? prefix = null, params string[] extensions)
+        => storageProvider.EnumerateAsync(prefix, extensions, CancellationToken.None);
+
     public static async Task<string?> ReadAsStringAsync(this IStorageProvider storageProvider, string path, CancellationToken cancellationToken = default)
     {
         Stream? stream = await storageProvider.ReadAsync(path, cancellationToken).ConfigureAwait(false);

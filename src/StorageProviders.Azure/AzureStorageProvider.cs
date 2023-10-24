@@ -1,4 +1,5 @@
-﻿using Azure;
+﻿using System.Runtime.CompilerServices;
+using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using MimeMapping;
@@ -28,11 +29,37 @@ public sealed class AzureStorageProvider : IStorageProvider
         cancellationToken.ThrowIfCancellationRequested();
         ArgumentException.ThrowIfNullOrEmpty(path, nameof(path));
 
-        (string containerName, string blobName) = ExtractContainerBlobName(path);
-        BlobContainerClient blobContainerClient = blobServiceClient.GetBlobContainerClient(containerName);
+        string[] properties = ExtractContainerBlobName(path);
+        string containerName = properties.ElementAtOrDefault(0) ?? string.Empty;
+        string blobName = properties.ElementAtOrDefault(1) ?? string.Empty;
+
+        BlobContainerClient blobContainerClient = await GetBlobContainerClientAsync(containerName, cancellationToken: cancellationToken).ConfigureAwait(false);
 
         await blobContainerClient.DeleteBlobIfExistsAsync(blobName, cancellationToken: cancellationToken).ConfigureAwait(false);
         await storageCache.DeleteAsync(path, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async IAsyncEnumerable<string> EnumerateAsync(string? prefix, string[] extensions, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+        cancellationToken.ThrowIfCancellationRequested();
+
+        string[] properties = ExtractContainerBlobName(prefix);
+        string containerName = properties.ElementAtOrDefault(0) ?? string.Empty;
+        string pathPrefix = properties.ElementAtOrDefault(1) ?? string.Empty;
+
+        BlobContainerClient blobContainerClient = await GetBlobContainerClientAsync(containerName, cancellationToken: cancellationToken).ConfigureAwait(false);
+        var blobs = blobContainerClient.GetBlobsAsync(prefix: pathPrefix, cancellationToken: cancellationToken).AsPages().WithCancellation(cancellationToken).ConfigureAwait(false);
+
+        await foreach (Page<BlobItem> blobPage in blobs)
+        {
+            foreach (BlobItem blob in blobPage.Values.Where(b => !b.Deleted &&
+                ((!extensions?.Any() ?? true) || extensions!.Any(e => string.Equals(Path.GetExtension(b.Name), e, StringComparison.InvariantCultureIgnoreCase)))))
+            {
+                string name = string.IsNullOrWhiteSpace(azureStorageSettings.ContainerName) ? $"{containerName}/{blob.Name}" : blob.Name;
+                yield return name;
+            }
+        }
     }
 
     public async Task<bool> ExistsAsync(string path, CancellationToken cancellationToken = default)
@@ -78,6 +105,7 @@ public sealed class AzureStorageProvider : IStorageProvider
         ArgumentException.ThrowIfNullOrEmpty(path, nameof(path));
 
         Stream? stream = await storageCache.ReadAsync(path, cancellationToken).ConfigureAwait(false);
+
         if (stream is null)
         {
             BlobClient blobClient = await GetBlobClientAsync(path, cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -104,6 +132,7 @@ public sealed class AzureStorageProvider : IStorageProvider
         ArgumentNullException.ThrowIfNull(stream, nameof(stream));
 
         BlobClient blobClient = await GetBlobClientAsync(path, true, cancellationToken).ConfigureAwait(false);
+
         if (!overwrite)
         {
             bool blobExists = await blobClient.ExistsAsync(cancellationToken).ConfigureAwait(false);
@@ -150,29 +179,37 @@ public sealed class AzureStorageProvider : IStorageProvider
         }
     }
 
-    private async Task<BlobClient> GetBlobClientAsync(string path, bool createIfNotExists = false, CancellationToken cancellationToken = default)
+    private async Task<BlobContainerClient> GetBlobContainerClientAsync(string containerName, bool createIfNotExists = false, CancellationToken cancellationToken = default)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-
-        (string containerName, string blobName) = ExtractContainerBlobName(path);
         BlobContainerClient blobContainerClient = blobServiceClient.GetBlobContainerClient(containerName);
-
         if (createIfNotExists)
         {
             await blobContainerClient.CreateIfNotExistsAsync(PublicAccessType.None, cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
+        return blobContainerClient;
+    }
+
+    private async Task<BlobClient> GetBlobClientAsync(string path, bool createIfNotExists = false, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        string[] properties = ExtractContainerBlobName(path);
+
+        string containerName = properties.ElementAtOrDefault(0) ?? string.Empty;
+        string blobName = properties.ElementAtOrDefault(1) ?? string.Empty;
+
+        BlobContainerClient blobContainerClient = await GetBlobContainerClientAsync(containerName, createIfNotExists, cancellationToken).ConfigureAwait(false);
         return blobContainerClient.GetBlobClient(blobName);
     }
 
-    private (string ContainerName, string BlobName) ExtractContainerBlobName(string? path)
+    private string[] ExtractContainerBlobName(string? path)
     {
         string normalizedPath = path?.Replace(@"\", "/") ?? string.Empty;
         string? containerName = azureStorageSettings.ContainerName;
 
         if (!string.IsNullOrWhiteSpace(containerName))
         {
-            return (containerName, normalizedPath);
+            return new string[2] { containerName, normalizedPath };
         }
         else
         {
@@ -183,7 +220,7 @@ public sealed class AzureStorageProvider : IStorageProvider
             containerName = parts.First().ToLowerInvariant();
 
             string blobName = string.Join('/', parts.Skip(1));
-            return (containerName, blobName);
+            return new string[2] { containerName, blobName };
         }
     }
 }
