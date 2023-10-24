@@ -2,7 +2,7 @@
 
 namespace StorageProviders.FileSystem;
 
-internal class FileSystemStorageProvider : IStorageProvider
+public class FileSystemStorageProvider : IStorageProvider
 {
     private readonly FileSystemStorageSettings fileSystemStorageSettings;
     private readonly IStorageCache storageCache;

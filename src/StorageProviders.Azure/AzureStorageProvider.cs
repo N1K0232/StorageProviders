@@ -6,7 +6,7 @@ using StorageProviders.Abstractions;
 
 namespace StorageProviders.Azure;
 
-internal class AzureStorageProvider : IStorageProvider
+public class AzureStorageProvider : IStorageProvider
 {
     private readonly AzureStorageSettings azureStorageSettings;
     private readonly BlobServiceClient blobServiceClient;
