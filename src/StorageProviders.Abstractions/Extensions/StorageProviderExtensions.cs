@@ -2,43 +2,49 @@
 
 public static class StorageProviderExtensions
 {
-    public static async Task<string?> ReadAsStringAsync(this IStorageProvider storageProvider, string path)
+    public static async Task<string?> ReadAsStringAsync(this IStorageProvider storageProvider, string path, CancellationToken cancellationToken = default)
     {
-        using Stream? stream = await storageProvider.ReadAsync(path).ConfigureAwait(false);
+        Stream? stream = await storageProvider.ReadAsync(path, cancellationToken).ConfigureAwait(false);
         if (stream is null)
         {
             return null;
         }
 
-        stream.Position = 0;
-        using var reader = new StreamReader(stream);
+        stream.Position = 0L;
+        var reader = new StreamReader(stream);
 
-        string content = await reader.ReadToEndAsync().ConfigureAwait(false);
-        stream.Close();
+        string content = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+        await stream.DisposeAsync().ConfigureAwait(false);
+
+        reader.Dispose();
+        return content;
+    }
+
+    public static async Task<byte[]?> ReadAsByteArrayAsync(this IStorageProvider storageProvider, string path, CancellationToken cancellationToken = default)
+    {
+        Stream? stream = await storageProvider.ReadAsync(path, cancellationToken).ConfigureAwait(false);
+        if (stream is null)
+        {
+            return null;
+        }
+
+        stream.Position = 0L;
+        var memoryStream = new MemoryStream();
+
+        await stream.CopyToAsync(memoryStream, cancellationToken).ConfigureAwait(false);
+        await stream.DisposeAsync().ConfigureAwait(false);
+
+        byte[] content = memoryStream.ToArray();
+        await memoryStream.DisposeAsync().ConfigureAwait(false);
 
         return content;
     }
 
-    public static async Task<byte[]?> ReadAsByteArrayAsync(this IStorageProvider storageProvider, string path)
+    public static async Task UploadAsync(this IStorageProvider storageProvider, string path, byte[] content, bool overwrite = false, CancellationToken cancellationToken = default)
     {
-        using Stream? stream = await storageProvider.ReadAsync(path).ConfigureAwait(false);
-        if (stream is null)
-        {
-            return null;
-        }
+        var stream = new MemoryStream(content);
 
-        stream.Position = 0;
-        using var memoryStream = new MemoryStream();
-
-        await stream.CopyToAsync(memoryStream).ConfigureAwait(false);
-        stream.Close();
-
-        return memoryStream.ToArray();
-    }
-
-    public static async Task UploadAsync(this IStorageProvider storageProvider, string path, byte[] content, bool overwrite = false)
-    {
-        using var stream = new MemoryStream(content);
-        await storageProvider.UploadAsync(path, stream, overwrite).ConfigureAwait(false);
+        await storageProvider.UploadAsync(path, stream, overwrite, cancellationToken).ConfigureAwait(false);
+        await stream.DisposeAsync().ConfigureAwait(false);
     }
 }
