@@ -2,7 +2,7 @@
 
 namespace StorageProviders;
 
-public interface IStorageProvider
+public interface IStorageProvider : IDisposable
 {
     Task DeleteAsync(string path, CancellationToken cancellationToken = default);
 

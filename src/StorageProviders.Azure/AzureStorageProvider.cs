@@ -6,11 +6,13 @@ using StorageProviders.Abstractions;
 
 namespace StorageProviders.Azure;
 
-public class AzureStorageProvider : IStorageProvider
+public sealed class AzureStorageProvider : IStorageProvider
 {
     private readonly AzureStorageSettings azureStorageSettings;
-    private readonly BlobServiceClient blobServiceClient;
     private readonly IStorageCache storageCache;
+
+    private BlobServiceClient blobServiceClient;
+    private bool disposed = false;
 
     public AzureStorageProvider(AzureStorageSettings azureStorageSettings, IStorageCache storageCache)
     {
@@ -22,8 +24,9 @@ public class AzureStorageProvider : IStorageProvider
 
     public async Task DeleteAsync(string path, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrEmpty(path, nameof(path));
+        ThrowIfDisposed();
         cancellationToken.ThrowIfCancellationRequested();
+        ArgumentException.ThrowIfNullOrEmpty(path, nameof(path));
 
         (string containerName, string blobName) = ExtractContainerBlobName(path);
         BlobContainerClient blobContainerClient = blobServiceClient.GetBlobContainerClient(containerName);
@@ -34,8 +37,9 @@ public class AzureStorageProvider : IStorageProvider
 
     public async Task<bool> ExistsAsync(string path, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrEmpty(path, nameof(path));
+        ThrowIfDisposed();
         cancellationToken.ThrowIfCancellationRequested();
+        ArgumentException.ThrowIfNullOrEmpty(path, nameof(path));
 
         BlobClient blobClient = await GetBlobClientAsync(path, cancellationToken: cancellationToken).ConfigureAwait(false);
         return await blobClient.ExistsAsync(cancellationToken).ConfigureAwait(false);
@@ -43,8 +47,9 @@ public class AzureStorageProvider : IStorageProvider
 
     public async Task<StorageFileInfo?> GetPropertiesAsync(string path, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrEmpty(path, nameof(path));
+        ThrowIfDisposed();
         cancellationToken.ThrowIfCancellationRequested();
+        ArgumentException.ThrowIfNullOrEmpty(path, nameof(path));
 
         BlobClient blobClient = await GetBlobClientAsync(path, cancellationToken: cancellationToken).ConfigureAwait(false);
         Response<BlobProperties> properties = await blobClient.GetPropertiesAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -68,8 +73,9 @@ public class AzureStorageProvider : IStorageProvider
 
     public async Task<Stream?> ReadAsync(string path, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrEmpty(path, nameof(path));
+        ThrowIfDisposed();
         cancellationToken.ThrowIfCancellationRequested();
+        ArgumentException.ThrowIfNullOrEmpty(path, nameof(path));
 
         Stream? stream = await storageCache.ReadAsync(path, cancellationToken).ConfigureAwait(false);
         if (stream is null)
@@ -91,9 +97,11 @@ public class AzureStorageProvider : IStorageProvider
 
     public async Task UploadAsync(string path, Stream stream, bool overwrite = false, CancellationToken cancellationToken = default)
     {
+        ThrowIfDisposed();
+        cancellationToken.ThrowIfCancellationRequested();
+
         ArgumentException.ThrowIfNullOrEmpty(path, nameof(path));
         ArgumentNullException.ThrowIfNull(stream, nameof(stream));
-        cancellationToken.ThrowIfCancellationRequested();
 
         BlobClient blobClient = await GetBlobClientAsync(path, true, cancellationToken).ConfigureAwait(false);
         if (!overwrite)
@@ -117,6 +125,29 @@ public class AzureStorageProvider : IStorageProvider
 
         await blobClient.UploadAsync(stream, headers, cancellationToken: cancellationToken).ConfigureAwait(false);
         await storageCache.SetAsync(path, stream, TimeSpan.FromHours(1), cancellationToken).ConfigureAwait(false);
+    }
+
+    public void Dispose()
+    {
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing)
+    {
+        if (disposing && !disposed)
+        {
+            blobServiceClient = null!;
+            disposed = true;
+        }
+    }
+
+    private void ThrowIfDisposed()
+    {
+        if (disposed)
+        {
+            throw new ObjectDisposedException(GetType().FullName);
+        }
     }
 
     private async Task<BlobClient> GetBlobClientAsync(string path, bool createIfNotExists = false, CancellationToken cancellationToken = default)

@@ -2,10 +2,12 @@
 
 namespace StorageProviders.FileSystem;
 
-public class FileSystemStorageProvider : IStorageProvider
+public sealed class FileSystemStorageProvider : IStorageProvider
 {
     private readonly FileSystemStorageSettings fileSystemStorageSettings;
     private readonly IStorageCache storageCache;
+
+    private bool disposed = false;
 
     public FileSystemStorageProvider(FileSystemStorageSettings fileSystemStorageSettings, IStorageCache storageCache)
     {
@@ -15,8 +17,9 @@ public class FileSystemStorageProvider : IStorageProvider
 
     public async Task DeleteAsync(string path, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrEmpty(path, nameof(path));
+        ThrowIfDisposed();
         cancellationToken.ThrowIfCancellationRequested();
+        ArgumentException.ThrowIfNullOrEmpty(path, nameof(path));
 
         string fullPath = CreatePath(path);
         bool exists = File.Exists(fullPath);
@@ -30,8 +33,9 @@ public class FileSystemStorageProvider : IStorageProvider
 
     public Task<bool> ExistsAsync(string path, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrEmpty(path, nameof(path));
+        ThrowIfDisposed();
         cancellationToken.ThrowIfCancellationRequested();
+        ArgumentException.ThrowIfNullOrEmpty(path, nameof(path));
 
         string fullPath = CreatePath(path);
         bool exists = File.Exists(fullPath);
@@ -39,34 +43,16 @@ public class FileSystemStorageProvider : IStorageProvider
         return Task.FromResult(exists);
     }
 
-    public async Task<StorageFileInfo?> GetPropertiesAsync(string path, CancellationToken cancellationToken = default)
+    public Task<StorageFileInfo?> GetPropertiesAsync(string path, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrEmpty(path, nameof(path));
-        cancellationToken.ThrowIfCancellationRequested();
-
-        Stream? stream = await ReadCoreAsync(path, cancellationToken).ConfigureAwait(false);
-        if (stream is null)
-        {
-            return null;
-        }
-
-        string? fileName = Path.GetFileName(path) ?? string.Empty;
-        var fileInfo = new FileInfo(fileName);
-
-        var storageFileInfo = new StorageFileInfo(path)
-        {
-            Length = stream.Length,
-            CreationDate = fileInfo.CreationTimeUtc,
-            LastModifiedDate = fileInfo.LastWriteTimeUtc
-        };
-
-        return storageFileInfo;
+        throw new NotImplementedException();
     }
 
     public async Task<Stream?> ReadAsync(string path, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrEmpty(path, nameof(path));
+        ThrowIfDisposed();
         cancellationToken.ThrowIfCancellationRequested();
+        ArgumentException.ThrowIfNullOrEmpty(path, nameof(path));
 
         string fullPath = CreatePath(path);
         Stream? stream = await storageCache.ReadAsync(fullPath, cancellationToken).ConfigureAwait(false);
@@ -81,9 +67,11 @@ public class FileSystemStorageProvider : IStorageProvider
 
     public async Task UploadAsync(string path, Stream stream, bool overwrite = false, CancellationToken cancellationToken = default)
     {
+        ThrowIfDisposed();
+        cancellationToken.ThrowIfCancellationRequested();
+
         ArgumentException.ThrowIfNullOrEmpty(path, nameof(path));
         ArgumentNullException.ThrowIfNull(stream, nameof(stream));
-        cancellationToken.ThrowIfCancellationRequested();
 
         string fullPath = CreatePath(path);
         await CreateDirectoryAsync(path, cancellationToken).ConfigureAwait(false);
@@ -93,6 +81,28 @@ public class FileSystemStorageProvider : IStorageProvider
 
         await stream.CopyToAsync(outputStream, cancellationToken).ConfigureAwait(false);
         await storageCache.SetAsync(fullPath, outputStream, TimeSpan.FromHours(1), cancellationToken).ConfigureAwait(false);
+    }
+
+    public void Dispose()
+    {
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing)
+    {
+        if (disposing && !disposed)
+        {
+            disposed = true;
+        }
+    }
+
+    private void ThrowIfDisposed()
+    {
+        if (disposed)
+        {
+            throw new ObjectDisposedException(GetType().FullName);
+        }
     }
 
     private Task CreateDirectoryAsync(string path, CancellationToken cancellationToken = default)
