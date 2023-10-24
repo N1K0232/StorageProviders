@@ -7,6 +7,7 @@ public sealed class FileSystemStorageProvider : IStorageProvider
     private readonly FileSystemStorageSettings fileSystemStorageSettings;
     private readonly IStorageCache storageCache;
 
+    private Stream? outputStream;
     private bool disposed = false;
 
     public FileSystemStorageProvider(FileSystemStorageSettings fileSystemStorageSettings, IStorageCache storageCache)
@@ -22,7 +23,7 @@ public sealed class FileSystemStorageProvider : IStorageProvider
         ArgumentException.ThrowIfNullOrEmpty(path, nameof(path));
 
         string fullPath = CreatePath(path);
-        bool exists = File.Exists(fullPath);
+        bool exists = await CheckExistsAsync(path).ConfigureAwait(false);
 
         if (exists)
         {
@@ -36,16 +37,13 @@ public sealed class FileSystemStorageProvider : IStorageProvider
         throw new NotImplementedException();
     }
 
-    public Task<bool> ExistsAsync(string path, CancellationToken cancellationToken = default)
+    public async Task<bool> ExistsAsync(string path, CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();
         cancellationToken.ThrowIfCancellationRequested();
         ArgumentException.ThrowIfNullOrEmpty(path, nameof(path));
 
-        string fullPath = CreatePath(path);
-        bool exists = File.Exists(fullPath);
-
-        return Task.FromResult(exists);
+        return await CheckExistsAsync(path).ConfigureAwait(false);
     }
 
     public Task<StorageFileInfo?> GetPropertiesAsync(string path, CancellationToken cancellationToken = default)
@@ -64,7 +62,7 @@ public sealed class FileSystemStorageProvider : IStorageProvider
 
         if (stream is null)
         {
-            return await ReadCoreAsync(path, cancellationToken).ConfigureAwait(false);
+            return await ReadCoreAsync(path).ConfigureAwait(false);
         }
 
         return stream;
@@ -81,7 +79,7 @@ public sealed class FileSystemStorageProvider : IStorageProvider
         string fullPath = CreatePath(path);
         await CreateDirectoryAsync(path, cancellationToken).ConfigureAwait(false);
 
-        using var outputStream = new FileStream(fullPath, FileMode.Create, FileAccess.Write);
+        outputStream = new FileStream(fullPath, FileMode.Create, FileAccess.Write);
         stream.Position = 0;
 
         await stream.CopyToAsync(outputStream, cancellationToken).ConfigureAwait(false);
@@ -98,6 +96,14 @@ public sealed class FileSystemStorageProvider : IStorageProvider
     {
         if (disposing && !disposed)
         {
+            if (outputStream != null)
+            {
+                outputStream.Close();
+                outputStream.Dispose();
+
+                outputStream = null;
+            }
+
             disposed = true;
         }
     }
@@ -108,6 +114,14 @@ public sealed class FileSystemStorageProvider : IStorageProvider
         {
             throw new ObjectDisposedException(GetType().FullName);
         }
+    }
+
+    private Task<bool> CheckExistsAsync(string path)
+    {
+        string fullPath = CreatePath(path);
+        bool exists = File.Exists(fullPath);
+
+        return Task.FromResult(exists);
     }
 
     private Task CreateDirectoryAsync(string path, CancellationToken cancellationToken = default)
@@ -136,14 +150,15 @@ public sealed class FileSystemStorageProvider : IStorageProvider
         return fullPath;
     }
 
-    private Task<Stream?> ReadCoreAsync(string path, CancellationToken cancellationToken = default)
+    private async Task<Stream?> ReadCoreAsync(string path)
     {
-        cancellationToken.ThrowIfCancellationRequested();
+        bool exists = await CheckExistsAsync(path).ConfigureAwait(false);
+        if (!exists)
+        {
+            return null;
+        }
 
         string fullPath = CreatePath(path);
-        bool exists = File.Exists(fullPath);
-
-        Stream? stream = exists ? File.OpenRead(fullPath) : null;
-        return Task.FromResult(stream);
+        return File.OpenRead(fullPath);
     }
 }
