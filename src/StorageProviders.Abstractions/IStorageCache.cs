@@ -1,6 +1,6 @@
 ﻿namespace StorageProviders;
 
-public interface IStorageCache
+public interface IStorageCache : IDisposable
 {
     Task DeleteAsync(string path, CancellationToken cancellationToken = default);
 

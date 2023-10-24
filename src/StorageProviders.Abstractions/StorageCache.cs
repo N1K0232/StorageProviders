@@ -4,7 +4,8 @@ namespace StorageProviders;
 
 internal class StorageCache : IStorageCache
 {
-    private readonly IMemoryCache cache;
+    private IMemoryCache cache;
+    private bool disposed = false;
 
     public StorageCache(IMemoryCache cache)
     {
@@ -13,6 +14,7 @@ internal class StorageCache : IStorageCache
 
     public Task DeleteAsync(string path, CancellationToken cancellationToken = default)
     {
+        ThrowIfDisposed();
         ArgumentException.ThrowIfNullOrEmpty(path, nameof(path));
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -22,6 +24,7 @@ internal class StorageCache : IStorageCache
 
     public Task<Stream?> ReadAsync(string path, CancellationToken cancellationToken = default)
     {
+        ThrowIfDisposed();
         ArgumentException.ThrowIfNullOrEmpty(path, nameof(path));
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -35,10 +38,39 @@ internal class StorageCache : IStorageCache
 
     public Task SetAsync(string path, Stream stream, TimeSpan expiration, CancellationToken cancellationToken = default)
     {
+        ThrowIfDisposed();
         ArgumentException.ThrowIfNullOrEmpty(path, nameof(path));
         cancellationToken.ThrowIfCancellationRequested();
 
         cache.Set(path, stream, expiration);
         return Task.CompletedTask;
+    }
+
+    public void Dispose()
+    {
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing)
+    {
+        if (disposing && !disposed)
+        {
+            if (cache != null)
+            {
+                cache.Dispose();
+                cache = null!;
+            }
+
+            disposed = true;
+        }
+    }
+
+    private void ThrowIfDisposed()
+    {
+        if (disposed)
+        {
+            throw new ObjectDisposedException(GetType().FullName);
+        }
     }
 }
