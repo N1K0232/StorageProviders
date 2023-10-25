@@ -67,6 +67,15 @@ public sealed class FileSystemStorageProvider : StorageProvider
         ArgumentException.ThrowIfNullOrEmpty(path, nameof(path));
         ArgumentNullException.ThrowIfNull(stream, nameof(stream));
 
+        if (!overwrite)
+        {
+            bool exists = await CheckExistsAsync(path, cancellationToken).ConfigureAwait(false);
+            if (exists)
+            {
+                throw new IOException($"The file {path} already exists");
+            }
+        }
+
         await CreateDirectoryAsync(path, cancellationToken).ConfigureAwait(false);
         string fullPath = CreatePath(path);
 
