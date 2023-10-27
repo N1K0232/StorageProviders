@@ -24,6 +24,7 @@ public class PhotoService : IPhotoService
         if (photo != null)
         {
             dataContext.Remove(photo);
+
             await dataContext.SaveChangesAsync();
             await storageProvider.DeleteAsync(photo.FileName);
         }
@@ -33,6 +34,7 @@ public class PhotoService : IPhotoService
     {
         var photos = await dataContext.Photos.OrderBy(p => p.FileName)
             .ToListAsync();
+
         return photos;
     }
 
@@ -64,7 +66,9 @@ public class PhotoService : IPhotoService
             Length = stream.Length,
             Description = description
         };
+
         dataContext.Photos.Add(photo);
+
         await dataContext.SaveChangesAsync();
         await storageProvider.UploadAsync(fileName, stream);
     }
