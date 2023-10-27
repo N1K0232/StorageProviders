@@ -9,13 +9,12 @@ namespace StorageProviders.Azure;
 public sealed partial class AzureStorageProvider : StorageProvider
 {
     private readonly AzureStorageSettings azureStorageSettings;
-    private BlobServiceClient blobServiceClient;
+    private BlobServiceClient blobServiceClient = null!;
 
     public AzureStorageProvider(AzureStorageSettings azureStorageSettings)
     {
-        blobServiceClient = new BlobServiceClient(azureStorageSettings.ConnectionString);
-
         this.azureStorageSettings = azureStorageSettings;
+        blobServiceClient = new BlobServiceClient(azureStorageSettings.ConnectionString);
     }
 
     public override async Task DeleteAsync(string path, CancellationToken cancellationToken = default)

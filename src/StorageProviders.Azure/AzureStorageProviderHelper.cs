@@ -1,6 +1,9 @@
-﻿namespace StorageProviders.Azure;
+﻿using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
 
-public sealed partial class AzureStorageProvider
+namespace StorageProviders.Azure;
+
+public sealed partial class AzureStorageProvider : StorageProvider
 {
     private async Task<BlobContainerClient> GetBlobContainerClientAsync(string containerName, bool createIfNotExists = false, CancellationToken cancellationToken = default)
     {
