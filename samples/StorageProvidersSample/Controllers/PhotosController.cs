@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using StorageProvidersSample.BusinessLayer;
 using StorageProvidersSample.BusinessLayer.Models;
+using StorageProvidersSample.DataAccessLayer.Entities;
 
 namespace StorageProvidersSample.Controllers;
 
@@ -17,20 +18,28 @@ public class PhotosController : ControllerBase
         this.photoService = photoService;
     }
 
-    [HttpDelete("{fileName}")]
+    [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public async Task<IActionResult> Delete(string fileName)
+    public async Task<IActionResult> Delete(Guid id)
     {
-        await photoService.DeleteAsync(fileName);
+        await photoService.DeleteAsync(id);
         return NoContent();
     }
 
-    [HttpGet("{fileName}")]
+    [HttpGet]
+    [ProducesResponseType(typeof(IEnumerable<Photo>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetList()
+    {
+        var photos = await photoService.GetListAsync();
+        return Ok(photos);
+    }
+
+    [HttpGet("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Read(string fileName)
+    public async Task<IActionResult> Read(Guid id)
     {
-        StreamFileContent content = await photoService.ReadAsync(fileName);
+        StreamFileContent content = await photoService.ReadAsync(id);
         if (content != null)
         {
             return File(content.Stream, content.ContentType);
@@ -42,9 +51,9 @@ public class PhotosController : ControllerBase
     [HttpPost]
     [Consumes("multipart/form-data")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public async Task<IActionResult> Upload(IFormFile file)
+    public async Task<IActionResult> Upload(IFormFile file, string description)
     {
-        await photoService.SaveAsync(file.FileName, file.OpenReadStream());
+        await photoService.SaveAsync(file.OpenReadStream(), file.FileName, description);
         return NoContent();
     }
 }

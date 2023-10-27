@@ -1,4 +1,5 @@
 using StorageProvidersSample.BusinessLayer;
+using StorageProvidersSample.DataAccessLayer;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -6,14 +7,17 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-var azureStorage = builder.Configuration.GetConnectionString("AzureStorage");
+var connectionString = builder.Configuration.GetConnectionString("SqlConnection");
+builder.Services.AddSqlServer<DataContext>(connectionString);
+
+var azureStorageConnectionString = builder.Configuration.GetConnectionString("AzureStorage");
 var storageFolder = builder.Configuration.GetValue<string>("AppSettings:StorageFolder");
 
-if (!string.IsNullOrWhiteSpace(azureStorage))
+if (!string.IsNullOrWhiteSpace(azureStorageConnectionString))
 {
     builder.Services.AddAzureStorage(options =>
     {
-        options.ConnectionString = azureStorage;
+        options.ConnectionString = azureStorageConnectionString;
         options.ContainerName = storageFolder;
     });
 }

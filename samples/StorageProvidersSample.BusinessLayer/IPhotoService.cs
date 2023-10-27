@@ -1,12 +1,15 @@
 ﻿using StorageProvidersSample.BusinessLayer.Models;
+using StorageProvidersSample.DataAccessLayer.Entities;
 
 namespace StorageProvidersSample.BusinessLayer;
 
 public interface IPhotoService
 {
-    Task DeleteAsync(string fileName);
+    Task DeleteAsync(Guid id);
 
-    Task<StreamFileContent> ReadAsync(string fileName);
+    Task<IEnumerable<Photo>> GetListAsync();
 
-    Task SaveAsync(string fileName, Stream stream);
+    Task<StreamFileContent> ReadAsync(Guid id);
+
+    Task SaveAsync(Stream stream, string fileName, string description);
 }

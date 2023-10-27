@@ -18,9 +18,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StorageProviders.Azure", "s
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StorageProviders.FileSystem", "src\StorageProviders.FileSystem\StorageProviders.FileSystem.csproj", "{230678D5-29AF-406E-BD2E-8D21E841820D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StorageProvidersSample", "samples\StorageProvidersSample\StorageProvidersSample.csproj", "{E38FC8EA-D878-49DA-BB53-051DCB65A508}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StorageProvidersSample", "samples\StorageProvidersSample\StorageProvidersSample.csproj", "{E38FC8EA-D878-49DA-BB53-051DCB65A508}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StorageProvidersSample.BusinessLayer", "samples\StorageProvidersSample.BusinessLayer\StorageProvidersSample.BusinessLayer.csproj", "{D68DF690-7148-4803-B309-5BFB01EB72CE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StorageProvidersSample.BusinessLayer", "samples\StorageProvidersSample.BusinessLayer\StorageProvidersSample.BusinessLayer.csproj", "{D68DF690-7148-4803-B309-5BFB01EB72CE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StorageProvidersSample.DataAccessLayer", "samples\StorageProvidersSample.DataAccessLayer\StorageProvidersSample.DataAccessLayer.csproj", "{EDB788EF-D147-4B3E-B3D7-96D369A10BDA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -48,6 +50,10 @@ Global
 		{D68DF690-7148-4803-B309-5BFB01EB72CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D68DF690-7148-4803-B309-5BFB01EB72CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D68DF690-7148-4803-B309-5BFB01EB72CE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EDB788EF-D147-4B3E-B3D7-96D369A10BDA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EDB788EF-D147-4B3E-B3D7-96D369A10BDA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EDB788EF-D147-4B3E-B3D7-96D369A10BDA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EDB788EF-D147-4B3E-B3D7-96D369A10BDA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -58,6 +64,7 @@ Global
 		{230678D5-29AF-406E-BD2E-8D21E841820D} = {11824DFD-6009-4B4E-9690-E68936D5EDE7}
 		{E38FC8EA-D878-49DA-BB53-051DCB65A508} = {B3AC2115-386D-49B5-A07C-B6C5AC5B01C3}
 		{D68DF690-7148-4803-B309-5BFB01EB72CE} = {B3AC2115-386D-49B5-A07C-B6C5AC5B01C3}
+		{EDB788EF-D147-4B3E-B3D7-96D369A10BDA} = {B3AC2115-386D-49B5-A07C-B6C5AC5B01C3}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {94DB3808-DC5C-4EF0-961B-44B6FE9BBA7E}
