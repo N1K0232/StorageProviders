@@ -1,13 +1,18 @@
-﻿namespace StorageProviders;
+﻿using Microsoft.Extensions.Logging;
+
+namespace StorageProviders;
 
 public abstract class StorageProvider : IStorageProvider
 {
     private MemoryStream? memoryStream;
     private bool disposed = false;
 
-    protected StorageProvider()
+    protected StorageProvider(ILogger logger)
     {
+        Logger = logger;
     }
+
+    public ILogger Logger { get; }
 
     public abstract Task DeleteAsync(string path, CancellationToken cancellationToken = default);
 
