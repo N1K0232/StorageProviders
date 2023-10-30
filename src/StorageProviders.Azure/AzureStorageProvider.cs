@@ -7,7 +7,7 @@ using MimeMapping;
 
 namespace StorageProviders.Azure;
 
-public sealed partial class AzureStorageProvider : StorageProvider
+public sealed partial class AzureStorageProvider : StorageProvider, IStorageProvider
 {
     private readonly AzureStorageSettings azureStorageSettings;
     private BlobServiceClient blobServiceClient = null!;
@@ -92,27 +92,39 @@ public sealed partial class AzureStorageProvider : StorageProvider
         return storageFileInfo;
     }
 
+    public override async Task MoveAsync(string oldPath, string newPath, CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+        cancellationToken.ThrowIfCancellationRequested();
+
+        ArgumentException.ThrowIfNullOrEmpty(oldPath, nameof(oldPath));
+        ArgumentException.ThrowIfNullOrEmpty(newPath, nameof(newPath));
+
+        Stream? stream = await ReadCoreAsync(oldPath, cancellationToken).ConfigureAwait(false);
+        if (stream is null)
+        {
+            throw new FileNotFoundException($"The file {oldPath} doesn't exists");
+        }
+
+        BlobClient oldBlobClient = await GetBlobClientAsync(oldPath, cancellationToken: cancellationToken).ConfigureAwait(false);
+        BlobClient newBlobClient = await GetBlobClientAsync(newPath, true, cancellationToken).ConfigureAwait(false);
+
+        var headers = new BlobHttpHeaders
+        {
+            ContentType = MimeUtility.GetMimeMapping(newPath)
+        };
+
+        await newBlobClient.UploadAsync(stream, headers, cancellationToken: cancellationToken).ConfigureAwait(false);
+        await oldBlobClient.DeleteIfExistsAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
     public override async Task<Stream?> ReadAsync(string path, CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();
         cancellationToken.ThrowIfCancellationRequested();
+
         ArgumentException.ThrowIfNullOrEmpty(path, nameof(path));
-
-        BlobClient blobClient = await GetBlobClientAsync(path, cancellationToken: cancellationToken).ConfigureAwait(false);
-        bool blobExists = await blobClient.ExistsAsync(cancellationToken).ConfigureAwait(false);
-
-        if (!blobExists)
-        {
-            return null;
-        }
-
-        Stream stream = await blobClient.OpenReadAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
-        if (stream.Position != 0)
-        {
-            stream.Position = 0L;
-        }
-
-        return stream;
+        return await ReadCoreAsync(path, cancellationToken).ConfigureAwait(false);
     }
 
     public override async Task UploadAsync(string path, Stream stream, bool overwrite = false, CancellationToken cancellationToken = default)

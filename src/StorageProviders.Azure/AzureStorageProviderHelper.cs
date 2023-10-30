@@ -3,7 +3,7 @@ using Azure.Storage.Blobs.Models;
 
 namespace StorageProviders.Azure;
 
-public sealed partial class AzureStorageProvider : StorageProvider
+public sealed partial class AzureStorageProvider : StorageProvider, IStorageProvider
 {
     private async Task<BlobContainerClient> GetBlobContainerClientAsync(string containerName, bool createIfNotExists = false, CancellationToken cancellationToken = default)
     {
@@ -48,5 +48,18 @@ public sealed partial class AzureStorageProvider : StorageProvider
             string blobName = string.Join('/', parts.Skip(1));
             return new string[2] { containerName, blobName };
         }
+    }
+
+    private async Task<Stream?> ReadCoreAsync(string path, CancellationToken cancellationToken = default)
+    {
+        BlobClient blobClient = await GetBlobClientAsync(path, cancellationToken: cancellationToken).ConfigureAwait(false);
+        bool exists = await blobClient.ExistsAsync(cancellationToken).ConfigureAwait(false);
+
+        if (!exists)
+        {
+            return null;
+        }
+
+        return await blobClient.OpenReadAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 }

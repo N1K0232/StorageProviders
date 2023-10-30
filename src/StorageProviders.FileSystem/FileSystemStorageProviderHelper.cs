@@ -1,6 +1,6 @@
 ﻿namespace StorageProviders.FileSystem;
 
-public sealed partial class FileSystemStorageProvider
+public sealed partial class FileSystemStorageProvider : StorageProvider, IStorageProvider
 {
     private Task<bool> CheckExistsAsync(string path, CancellationToken cancellationToken = default)
     {

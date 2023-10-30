@@ -12,6 +12,8 @@ public interface IStorageProvider : IDisposable
 
     Task<StorageFileInfo?> GetPropertiesAsync(string path, CancellationToken cancellationToken = default);
 
+    Task MoveAsync(string oldPath, string newPath, CancellationToken cancellationToken = default);
+
     Task<Stream?> ReadAsync(string path, CancellationToken cancellationToken = default);
 
     Task<byte[]?> ReadAsByteArrayAsync(string path, CancellationToken cancellationToken = default);

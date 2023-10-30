@@ -25,6 +25,8 @@ public abstract class StorageProvider : IStorageProvider
 
     public abstract Task<StorageFileInfo?> GetPropertiesAsync(string path, CancellationToken cancellationToken = default);
 
+    public abstract Task MoveAsync(string oldPath, string newPath, CancellationToken cancellationToken = default);
+
     public abstract Task<Stream?> ReadAsync(string path, CancellationToken cancellationToken = default);
 
     public async Task<byte[]?> ReadAsByteArrayAsync(string path, CancellationToken cancellationToken = default)

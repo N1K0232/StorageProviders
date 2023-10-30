@@ -2,7 +2,7 @@
 
 namespace StorageProviders.FileSystem;
 
-public sealed partial class FileSystemStorageProvider : StorageProvider
+public sealed partial class FileSystemStorageProvider : StorageProvider, IStorageProvider
 {
     private readonly FileSystemStorageSettings fileSystemStorageSettings;
     private Stream? outputStream;
@@ -44,6 +44,27 @@ public sealed partial class FileSystemStorageProvider : StorageProvider
     public override Task<StorageFileInfo?> GetPropertiesAsync(string path, CancellationToken cancellationToken = default)
     {
         throw new NotImplementedException();
+    }
+
+    public override async Task MoveAsync(string oldPath, string newPath, CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+        cancellationToken.ThrowIfCancellationRequested();
+
+        ArgumentException.ThrowIfNullOrEmpty(oldPath, nameof(oldPath));
+        ArgumentException.ThrowIfNullOrEmpty(newPath, nameof(newPath));
+
+        string oldFullPath = CreatePath(oldPath);
+        string newFullPath = CreatePath(newPath);
+
+        await CreateDirectoryAsync(newPath, cancellationToken).ConfigureAwait(false);
+        File.Move(oldFullPath, newFullPath);
+
+        bool oldFileExists = await CheckExistsAsync(oldPath, cancellationToken).ConfigureAwait(false);
+        if (oldFileExists)
+        {
+            File.Delete(oldFullPath);
+        }
     }
 
     public override async Task<Stream?> ReadAsync(string path, CancellationToken cancellationToken = default)
