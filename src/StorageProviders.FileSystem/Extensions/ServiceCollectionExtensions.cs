@@ -6,7 +6,10 @@ namespace Microsoft.Extensions.DependencyInjection;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddFileSystemStorage(this IServiceCollection services, Action<FileSystemStorageSettings> configuration)
+    public static IServiceCollection AddFileSystemStorage(this IServiceCollection services,
+        Action<FileSystemStorageSettings> configuration,
+        ServiceLifetime storageProviderSettingsLifetime = ServiceLifetime.Scoped,
+        ServiceLifetime storageProviderLifetime = ServiceLifetime.Scoped)
     {
         ArgumentNullException.ThrowIfNull(services, nameof(services));
         ArgumentNullException.ThrowIfNull(configuration, nameof(configuration));
@@ -14,13 +17,17 @@ public static class ServiceCollectionExtensions
         var fileSystemStorageSettings = new FileSystemStorageSettings();
         configuration.Invoke(fileSystemStorageSettings);
 
-        services.AddSingleton(fileSystemStorageSettings);
-        services.AddScoped<IStorageProvider, FileSystemStorageProvider>();
+        services.AddFileSystemStorageSettings(fileSystemStorageSettings, storageProviderSettingsLifetime);
+        services.AddFileSystemStorageCore(storageProviderLifetime);
 
         return services;
     }
 
-    public static IServiceCollection AddFileSystemStorage(this IServiceCollection services, IConfiguration configuration, string sectionName = "FileSystemStorageSettings")
+    public static IServiceCollection AddFileSystemStorage(this IServiceCollection services,
+        IConfiguration configuration,
+        string sectionName = "FileSystemStorageSettings",
+        ServiceLifetime storageProviderSettingsLifetime = ServiceLifetime.Scoped,
+        ServiceLifetime storageProviderLifetime = ServiceLifetime.Scoped)
     {
         ArgumentNullException.ThrowIfNull(services, nameof(services));
         ArgumentNullException.ThrowIfNull(configuration, nameof(configuration));
@@ -31,10 +38,39 @@ public static class ServiceCollectionExtensions
         }
 
         IConfigurationSection section = configuration.GetSection(sectionName);
-        FileSystemStorageSettings? fileSystemStorageSettings = section.Get<FileSystemStorageSettings>();
+        FileSystemStorageSettings fileSystemStorageSettings = section.Get<FileSystemStorageSettings>() ?? throw new InvalidOperationException("settings are required");
 
-        services.AddSingleton(fileSystemStorageSettings ?? throw new InvalidOperationException("settings are required"));
-        services.AddScoped<IStorageProvider, FileSystemStorageProvider>();
+        services.AddFileSystemStorageSettings(fileSystemStorageSettings, storageProviderSettingsLifetime);
+        services.AddFileSystemStorageCore(storageProviderLifetime);
+
+        return services;
+    }
+
+    private static IServiceCollection AddFileSystemStorageSettings(this IServiceCollection services, FileSystemStorageSettings fileSystemStorageSettings, ServiceLifetime storageProviderSettingsLifetime)
+    {
+        switch (storageProviderSettingsLifetime)
+        {
+            case ServiceLifetime.Scoped:
+                services.AddScoped(_ => fileSystemStorageSettings);
+                break;
+            case ServiceLifetime.Singleton:
+                services.AddSingleton(fileSystemStorageSettings);
+                break;
+            case ServiceLifetime.Transient:
+                services.AddTransient(_ => fileSystemStorageSettings);
+                break;
+        }
+
+        return services;
+    }
+
+    private static IServiceCollection AddFileSystemStorageCore(this IServiceCollection services, ServiceLifetime storageProviderLifetime)
+    {
+        Type storageProviderType = typeof(IStorageProvider);
+        Type fileSystemStorageProviderType = typeof(FileSystemStorageProvider);
+
+        var storageProviderService = new ServiceDescriptor(storageProviderType, fileSystemStorageProviderType, storageProviderLifetime);
+        services.Add(storageProviderService);
 
         return services;
     }

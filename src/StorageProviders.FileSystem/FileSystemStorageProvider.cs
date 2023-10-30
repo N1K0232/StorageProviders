@@ -1,11 +1,14 @@
-﻿namespace StorageProviders.FileSystem;
+﻿using Microsoft.Extensions.Logging;
+
+namespace StorageProviders.FileSystem;
 
 public sealed partial class FileSystemStorageProvider : StorageProvider
 {
     private readonly FileSystemStorageSettings fileSystemStorageSettings;
     private Stream? outputStream;
 
-    public FileSystemStorageProvider(FileSystemStorageSettings fileSystemStorageSettings)
+    public FileSystemStorageProvider(FileSystemStorageSettings fileSystemStorageSettings, ILogger<FileSystemStorageProvider> logger)
+        : base(logger)
     {
         this.fileSystemStorageSettings = fileSystemStorageSettings;
     }

@@ -23,7 +23,10 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    public static IServiceCollection AddAzureStorage(this IServiceCollection services, Action<AzureStorageSettings> configuration)
+    public static IServiceCollection AddAzureStorage(this IServiceCollection services,
+        Action<AzureStorageSettings> configuration,
+        ServiceLifetime storageProviderSettingsLifetime = ServiceLifetime.Scoped,
+        ServiceLifetime storageProviderLifetime = ServiceLifetime.Scoped)
     {
         ArgumentNullException.ThrowIfNull(services, nameof(services));
         ArgumentNullException.ThrowIfNull(configuration, nameof(configuration));
@@ -31,13 +34,17 @@ public static class ServiceCollectionExtensions
         var azureStorageSettings = new AzureStorageSettings();
         configuration.Invoke(azureStorageSettings);
 
-        services.AddSingleton(azureStorageSettings);
-        services.AddScoped<IStorageProvider, AzureStorageProvider>();
+        services.AddAzureStorageSettings(azureStorageSettings, storageProviderSettingsLifetime);
+        services.AddAzureStorageCore(storageProviderLifetime);
 
         return services;
     }
 
-    public static IServiceCollection AddAzureStorage(this IServiceCollection services, IConfiguration configuration, string sectionName = "AzureStorageSettings")
+    public static IServiceCollection AddAzureStorage(this IServiceCollection services,
+        IConfiguration configuration,
+        string sectionName = "AzureStorageSettings",
+        ServiceLifetime storageProviderSettingsLifetime = ServiceLifetime.Scoped,
+        ServiceLifetime storageProviderLifetime = ServiceLifetime.Scoped)
     {
         ArgumentNullException.ThrowIfNull(services, nameof(services));
         ArgumentNullException.ThrowIfNull(configuration, nameof(configuration));
@@ -48,10 +55,39 @@ public static class ServiceCollectionExtensions
         }
 
         IConfigurationSection section = configuration.GetSection(sectionName);
-        AzureStorageSettings? azureStorageSettings = section.Get<AzureStorageSettings>();
+        AzureStorageSettings azureStorageSettings = section.Get<AzureStorageSettings>() ?? throw new InvalidOperationException("settings are required");
 
-        services.AddSingleton(azureStorageSettings ?? throw new InvalidOperationException("settings are required"));
-        services.AddScoped<IStorageProvider, AzureStorageProvider>();
+        services.AddAzureStorageSettings(azureStorageSettings, storageProviderSettingsLifetime);
+        services.AddAzureStorageCore(storageProviderLifetime);
+
+        return services;
+    }
+
+    private static IServiceCollection AddAzureStorageSettings(this IServiceCollection services, AzureStorageSettings azureStorageSettings, ServiceLifetime storageProviderSettingsLifetime)
+    {
+        switch (storageProviderSettingsLifetime)
+        {
+            case ServiceLifetime.Scoped:
+                services.AddScoped(_ => azureStorageSettings);
+                break;
+            case ServiceLifetime.Singleton:
+                services.AddSingleton(azureStorageSettings);
+                break;
+            case ServiceLifetime.Transient:
+                services.AddTransient(_ => azureStorageSettings);
+                break;
+        }
+
+        return services;
+    }
+
+    private static IServiceCollection AddAzureStorageCore(this IServiceCollection services, ServiceLifetime storageProviderLifetime)
+    {
+        Type storageProviderType = typeof(IStorageProvider);
+        Type azureStorageProviderType = typeof(AzureStorageProvider);
+
+        var storageProviderService = new ServiceDescriptor(storageProviderType, azureStorageProviderType, storageProviderLifetime);
+        services.Add(storageProviderService);
 
         return services;
     }

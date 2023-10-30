@@ -2,6 +2,7 @@
 using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using Microsoft.Extensions.Logging;
 using MimeMapping;
 
 namespace StorageProviders.Azure;
@@ -11,7 +12,8 @@ public sealed partial class AzureStorageProvider : StorageProvider
     private readonly AzureStorageSettings azureStorageSettings;
     private BlobServiceClient blobServiceClient = null!;
 
-    public AzureStorageProvider(AzureStorageSettings azureStorageSettings)
+    public AzureStorageProvider(AzureStorageSettings azureStorageSettings, ILogger<AzureStorageProvider> logger)
+        : base(logger)
     {
         this.azureStorageSettings = azureStorageSettings;
         blobServiceClient = new BlobServiceClient(azureStorageSettings.ConnectionString);
